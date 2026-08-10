@@ -1,0 +1,17 @@
+{
+  "name": "diogo-notion-local-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local, token-based Notion MCP launcher for Codex without OAuth account linking.",
+  "type": "module",
+  "scripts": {
+    "inspect-tools": "node scripts/inspect-tools.mjs",
+    "verify-connection": "node scripts/verify-connection.mjs"
+  },
+  "dependencies": {
+    "@notionhq/notion-mcp-server": "2.5.1"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.25.1"
+  }
+}

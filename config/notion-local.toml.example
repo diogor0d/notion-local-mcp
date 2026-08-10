@@ -1,0 +1,26 @@
+[mcp_servers.notion_local]
+command = "<ABSOLUTE_PATH>\\bin\\NotionMcpLauncher.exe"
+enabled = true
+required = false
+startup_timeout_sec = 20
+tool_timeout_sec = 90
+default_tools_approval_mode = "writes"
+enabled_tools = [
+  "API-get-self",
+  "API-post-search",
+  "API-get-block-children",
+  "API-patch-block-children",
+  "API-retrieve-a-block",
+  "API-update-a-block",
+  "API-retrieve-a-page",
+  "API-patch-page",
+  "API-post-page",
+  "API-retrieve-a-page-property",
+  "API-retrieve-a-comment",
+  "API-create-a-comment",
+  "API-query-data-source",
+  "API-retrieve-a-data-source",
+  "API-retrieve-a-database",
+  "API-retrieve-page-markdown",
+  "API-update-page-markdown",
+]
