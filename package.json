@@ -12,6 +12,6 @@
     "@notionhq/notion-mcp-server": "2.5.1"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "1.25.1"
+    "@modelcontextprotocol/sdk": "1.26.0"
   }
 }
