@@ -11,7 +11,7 @@ const transport = new StdioClientTransport({
   args: [serverCli, "--transport", "stdio"],
   env: {
     ...process.env,
-    NOTION_TOKEN: "ntn_tool_discovery_only",
+    NOTION_TOKEN: "not-a-token",
   },
 });
 
@@ -32,4 +32,3 @@ try {
 } finally {
   await client.close();
 }
-

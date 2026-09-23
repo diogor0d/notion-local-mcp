@@ -2,3 +2,8 @@ node_modules/
 bin/
 *.log
 pnpm-debug.log*
+.env
+.env.*
+!.env.example
+*.dpapi
+config/notion-local.toml

@@ -1,35 +1,70 @@
-# Local Notion MCP for Codex
+# Notion MCP, kept local
 
-This setup connects Codex to Notion through the official local STDIO MCP server and a private Notion internal-integration token. It does **not** use Notion OAuth or link the Notion account to the ChatGPT account.
+Connect **Codex ↔ Notion** through Notion's STDIO MCP server, without putting an integration token in a repository or in Codex configuration.
 
-## Security model
+```text
+Codex ── STDIO ──► Windows launcher ── STDIO ──► Notion MCP server ── HTTPS ──► Notion
+                       │
+                       └── decrypts a per-user DPAPI token at startup
+```
 
-- The Notion token is never stored in this project or in Codex `config.toml`.
-- `scripts/set-token.ps1` encrypts it with Windows DPAPI for the current Windows user.
-- A minimal native launcher decrypts it in memory and gives the Node MCP process Codex's STDIO handles directly.
-- Notion controls which pages the integration can access.
-- Codex prompts before tools marked as writes. Explicit block deletion, page moves, user-directory access, and data-source schema creation or updates are not exposed.
-- Content returned by Notion becomes Codex task context; this is not an offline integration.
+This is a small, Windows-specific launcher and setup for people who prefer a Notion internal integration over account linking. The launcher starts the pinned upstream server locally; Notion content and tool calls still travel to Notion over the network.
 
-## Finish the setup
+## What it provides
 
-1. Open [Notion integrations](https://www.notion.so/profile/integrations) and create an **internal** integration.
-2. Start with **Read content** only. After read access is verified, enable **Insert content** and **Update content** when you are ready for edits.
-3. In the integration's **Access** tab, grant access only to the pages or databases Codex should work with.
-4. Run `scripts/build-launcher.ps1` once to build the local native launcher.
-5. Run `scripts/set-token.ps1` in PowerShell and paste the integration token into the hidden prompt. Do not paste the token into Codex or save it in a repository.
-6. Restart Codex. Use `/mcp` to confirm that `notion_local` is connected.
+- **No token in `config.toml`:** a hidden PowerShell prompt saves the token under `%LOCALAPPDATA%\Codex\NotionMcp\notion-token.dpapi`, encrypted for the current Windows user.
+- **Direct STDIO connection:** the native launcher passes Codex's standard streams to the Node server and exits with its status.
+- **Scoped access:** the Notion integration sees only the pages and databases you grant it; the example Codex config exposes a selected tool set.
+- **Read-only connection check:** `pnpm verify-connection` calls `API-get-self` and prints `NOTION_AUTH_OK` on success.
 
-Notion currently marks search and data-source queries as destructive even though they are read operations, so Codex may also ask for approval for those two operations.
+## Requirements
 
-## Token rotation
+- Windows and PowerShell
+- Node.js and pnpm
+- Codex with local MCP server configuration
+- A Notion **internal integration** and access to the pages or databases you want to use
 
-Run `scripts/set-token.ps1` again. The encrypted file is replaced for the current Windows user.
+## Set up
 
-## Local verification
+1. Install the pinned dependencies from the lockfile:
 
-Run `pnpm verify-connection`. It starts the same DPAPI-backed launcher used by Codex and calls only Notion's read-only `get-self` endpoint. A successful check prints `NOTION_AUTH_OK` without displaying the token or workspace content.
+   ```powershell
+   pnpm install --frozen-lockfile
+   ```
 
-## Package policy
+2. Create an [internal integration in Notion](https://www.notion.so/profile/integrations). Start with **Read content**. In its **Access** tab, grant only the pages or databases you need. Add **Insert content** and **Update content** later if you want Codex to edit them.
 
-The official `@notionhq/notion-mcp-server` package is pinned in `package.json` and `pnpm-lock.yaml`. Upgrade it deliberately and inspect its tool list before changing the Codex allow/deny policy.
+3. Build the Windows launcher, then store the token through the hidden prompt:
+
+   ```powershell
+   .\scripts\build-launcher.ps1
+   .\scripts\set-token.ps1
+   ```
+
+4. Copy the section from [`config/notion-local.toml.example`](config/notion-local.toml.example) into `%USERPROFILE%\.codex\config.toml`. Replace `<ABSOLUTE_PATH>` with this repository's absolute Windows path. In the example's double-quoted TOML string, keep each path separator doubled (`\\`). The resulting `command` must point to `bin\NotionMcpLauncher.exe`.
+
+5. Restart Codex and check `/mcp` for `notion_local`. Then run:
+
+   ```powershell
+   pnpm verify-connection
+   ```
+
+   The check calls only Notion's `get-self` tool. It does not print the token or workspace content.
+
+If the launcher cannot find Node, set `NOTION_MCP_NODE` to the absolute path of `node.exe` in the environment that starts Codex, then restart Codex.
+
+## Security boundaries
+
+The token stays outside this repository and is decrypted in the launcher process when it starts the MCP server. **DPAPI protects the saved token at rest for this Windows user; it does not make a compromised user session safe.** The Node process receives the token in its environment so it can authenticate with Notion.
+
+The example config asks for approval on tools marked as writes and exposes a selected set of tools. Review that list before enabling edit permissions. Notion may mark `API-post-search` and `API-query-data-source` as destructive despite their read behavior, so Codex may prompt for those calls too. Explicit block deletion, page moves, user-directory access, and data-source schema changes are absent from the example list.
+
+Notion responses become Codex task context. Avoid granting the integration access to content you do not want Codex to process.
+
+## Maintenance
+
+- **Rotate the token:** run `.\scripts\set-token.ps1` again and restart Codex.
+- **Inspect upstream tools:** run `pnpm inspect-tools` to list tool names and their read/destructive annotations. It uses a discovery-only placeholder token and does not call a Notion workspace.
+- **Upgrade deliberately:** `@notionhq/notion-mcp-server` is pinned in `package.json` and `pnpm-lock.yaml`. Reinspect tools and revisit the Codex allowlist after an upgrade.
+
+This repository is an example setup for a local Windows user, not a hosted Notion service.
